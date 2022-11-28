@@ -1,0 +1,210 @@
+// seccion codigo de usuario
+package com.mycompany.ejercicio02compi.analizadores;
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+
+parser code{:
+	public Parser(Lexer automata){
+		super(automata);
+	}
+	
+	private ArrayList<String> etiquetas=new ArrayList<String>();
+	private ArrayList<String> ejesx=new ArrayList<String>();
+	private ArrayList<Double> ejesy=new ArrayList<Double>();
+	private ArrayList<String> uniones=new ArrayList<String>();
+	private ArrayList<Double> valores=new ArrayList<Double>();
+	
+	private String titulo="";
+	private String tipo="";
+	private Double total = 0.0;
+	private String extra="";
+	private GraficaBarras graficaBarras;
+	
+	
+	public ArrayList<String> getEtiquetas(){
+		return etiquetas;
+	}
+	public ArrayList<String> getEjesX(){
+		return ejesx;
+	}
+	public ArrayList<Double> getEjesY(){
+		return ejesy;	
+	}
+	public ArrayList<String> getUniones(){
+		return uniones;
+	}
+	public ArrayList<Double> getValores(){
+		return valores;
+	}
+	
+	public String getTitulo(){
+		return titulo;
+	};
+	public String getTipo(){
+		return tipo;
+	};
+	public Double getTotal(){
+		return total;
+	};
+	public String getExtra(){
+		return extra;
+	}
+
+	private GraficaBarras getGraficaBarras(){
+		return graficaBarras;
+	}
+
+	public void ejeY(String[] ejes){
+		for(int i=0;i<ejes.length;i++){
+			double ejeY=Double.parseDouble(ejes[i]);
+			ejesy.add(ejeY);
+		}
+	}
+	public void ejeX(String[] ejes){
+		for(int i=0;i<ejes.length;i++){
+			ejesx.add(ejes[i]);
+		}
+	}
+	
+	public void etiquetas(String[] etiqueta){
+		for(int i=0;i<etiqueta.length;i++){
+			etiquetas.add(etiqueta[i]);
+		}
+	}
+	
+	public void uniones(String[] unir){
+		for(int i=0;i<unir.length;i++){
+			uniones.add(unir[i]);
+		}
+	}
+	
+	public void valores(String[] valor){
+		for(int i=0;i<valor.length;i++){
+			double numero=Double.parseDouble(valor[i]);
+			valores.add(numero);
+		}
+	}
+	
+	public void barras(){
+		graficaBarras=new GraficaBarras(titulo,ejesx,ejesy,uniones);
+	}
+	
+	public void report_error(String message, Object info) {
+        	System.out.println("public void report_error");
+    	}
+    	public void report_fatal_error(String message, Object info) {
+        	System.out.println("public void report_fatal_error");
+    	}
+    	public void syntax_error(Symbol cur_token) {
+        	System.out.println("El error es el simbolo: " + sym.terminalNames[cur_token.sym]);
+        	System.out.println(String.format("En la posicion: %d, %d", cur_token.left, cur_token.right));
+    	}
+    	public void unrecovered_syntax_error(Symbol cur_token) {
+        	if (cur_token.sym == sym.EOF) {
+        	    	System.out.println("public void unrecoveredsyntax_error");
+        	}
+    	}
+
+:};
+
+// seccion terminales
+terminal DEF,BARRAS,PIE,TITULO,EJEX,EJEY,ETIQUETAS,VALORES,UNIR,TIPO,TOTAL,EXTRA,EJECUTAR,SUMA,RESTA,MULTIPLICACION,DIVISION,PARENTESIS_A,PARENTESIS_C,LLAVE_A,LLAVE_C,CORCHETE_A,CORCHETE_C,COMA,DOS_PUNTOS,PUNTO_COMA,CADENA,PORCENTAJE,CANTIDAD,ENTERO,DECIMAL,COMENTARIO;
+
+
+// No terminales
+non terminal a,b,c,tipoGrafica,pie,barras,numero,operacion,tipo,x;
+
+// Gramaticas 
+
+a::= DEF tipoGrafica a{::}
+	| COMENTARIO a {::}   
+	;
+
+tipoGrafica::=BARRAS LLAVE_A barras c {:barras();:}
+	|PIE LLAVE_A pie c {::}
+	|COMENTARIO tipoGrafica {::}
+	;
+
+c::=a{::}
+	|b {::}
+	;
+	
+b::= EJECUTAR PARENTESIS_A CADENA:ejecutar PARENTESIS_C PUNTO_COMA b {: :}
+	|EJECUTAR PARENTESIS_A CADENA:ejecutar PARENTESIS_C PUNTO_COMA {: :} 
+	;
+
+barras::= TITULO DOS_PUNTOS CADENA:title PUNTO_COMA barras {:titulo=title.toString().replaceAll("\"","");:}
+	|EJEX DOS_PUNTOS CORCHETE_A CADENA:valor1 COMA CADENA:valor2 CORCHETE_C PUNTO_COMA barras {:
+	String[] valores=new String[2];
+	valores[0]=valor1.toString().replaceAll("\"","");
+	valores[1]=valor2.toString().replaceAll("\"","");
+	ejeX(valores);
+	:}
+	|EJEY DOS_PUNTOS CORCHETE_A numero:valor1 COMA numero:valor2 CORCHETE_C PUNTO_COMA barras {:
+	String[] valores=new String[2];
+	valores[0]=valor1.toString().replaceAll("\"","");
+	valores[1]=valor2.toString().replaceAll("\"","");
+	ejeY(valores);
+	:}
+	|UNIR DOS_PUNTOS CORCHETE_A LLAVE_A numero:num1 COMA numero:num2 LLAVE_C COMA LLAVE_A numero:num3 COMA numero:num4 LLAVE_C CORCHETE_C PUNTO_COMA barras {:
+	String[] valores=new String[4];
+	valores[0]=num1.toString();
+	valores[1]=num2.toString();
+	valores[2]=num3.toString();
+	valores[3]=num3.toString();
+	uniones(valores);
+	:}
+	|COMENTARIO barras {::}
+	|LLAVE_C 
+	;
+	
+numero::=operacion:num {:RESULT=num;:}
+	;	
+
+operacion::= operacion:num SUMA x:num2 {:RESULT=(double)num + (double)num2;:}
+	| operacion:num RESTA x:num2 {:RESULT=(double)num-(double)num2;:}
+	| operacion:num MULTIPLICACION x:num2 {:RESULT=(double)num * (double)num2;:}
+	| operacion:num DIVISION x:num2 {:RESULT=(double)num / (double)num2;:}
+	| x:num {:RESULT=num;:}
+	;
+
+	
+x ::= PARENTESIS_A operacion:num PARENTESIS_C {:RESULT=num;:}
+	| ENTERO:entero {:RESULT=entero;:}
+	| DECIMAL:decimal {:RESULT=decimal;:}
+	;	
+
+	
+pie::= TITULO DOS_PUNTOS CADENA:title PUNTO_COMA pie	{: titulo=title.toString().replaceAll("\"",""); :}
+	|TIPO DOS_PUNTOS tipo:texto PUNTO_COMA pie	{:tipo=texto.toString();:}
+	|ETIQUETAS DOS_PUNTOS CORCHETE_A CADENA:etiqueta1 COMA CADENA:etiqueta2 CORCHETE_C PUNTO_COMA pie {:
+	String[] valores=new String[2];
+	valores[0]=etiqueta1.toString().replaceAll("\"","");
+	valores[1]=etiqueta2.toString().replaceAll("\"","");
+	etiquetas(valores);
+	:}
+	|VALORES DOS_PUNTOS CORCHETE_A numero:num1 COMA numero:num2 CORCHETE_C PUNTO_COMA pie {:
+	String[] valor=new String[2];
+	valor[0]=num1.toString();
+	valor[1]=num2.toString();
+	valores(valor);
+	:}
+	|TOTAL DOS_PUNTOS numero:tot PUNTO_COMA pie {: total=Double.parseDouble(tot.toString());:}
+	|UNIR DOS_PUNTOS CORCHETE_A LLAVE_A ENTERO:num1 COMA ENTERO:num2 LLAVE_C COMA LLAVE_A ENTERO:num3 COMA ENTERO:num4 LLAVE_C CORCHETE_C PUNTO_COMA pie {:
+	String[] valores=new String[4];
+	valores[0]=num1.toString();
+	valores[1]=num2.toString();
+	valores[2]=num3.toString();
+	valores[3]=num4.toString();
+	uniones(valores);
+	:}
+	|EXTRA DOS_PUNTOS CADENA:texto PUNTO_COMA pie	{: extra=texto.toString(); :}
+	|COMENTARIO pie{::}
+	| LLAVE_C	
+	;
+
+
+tipo::=PORCENTAJE	{:RESULT="Porcentaje";:}
+	|CANTIDAD	{:RESULT="Cantidad";:}
+	;	

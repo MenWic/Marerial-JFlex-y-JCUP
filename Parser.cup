@@ -1,0 +1,173 @@
+//seccion del codigo de usuario
+package com.mycompany.ejercicio02compi.analizadores;
+
+import java.util.ArrayList;
+
+
+//Parser parser = new parser(automata);
+
+parser code {:
+   	public Parser(Lexer automata){
+        	super(automata);
+    	}
+	public ArrayList<Double> ejeY = new ArrayList<>();
+	public ArrayList<String> ejeX = new ArrayList<>();
+	public ArrayList<Unir> uniones = new ArrayList<>();
+	public ArrayList<String> etiquetas = new ArrayList<>();
+	public ArrayList<Double> valores = new ArrayList<>();
+	public String titulo = "";
+	public String tipo = "";
+	public Double total = 0.0;
+	public String extra = "";
+	public GraficaBarra graficaBarra;
+	public void guardarEjeY(String[] valoresEjeY){
+	
+		for(int x = 0; x < valoresEjeY.length; x++){
+			double valorEjeY = Double.parseDouble(valoresEjeY[x]);
+			ejeY.add(valorEjeY);		
+		}
+	}
+
+	public void guardarEjeX(String[] valoresEjeX){
+	
+		for(int x = 0; x < valoresEjeX.length; x++){
+			String valorEjeX = valoresEjeX[x].toString();
+			ejeX.add(valorEjeX);			
+		}
+	}
+
+
+	public void guardarEtiquetas(String[] etiquetas1){
+	
+		for(int x = 0; x < etiquetas1.length; x++){
+			String etiqueta = etiquetas1[x].toString();
+			etiquetas.add(etiqueta);			
+		}
+	}
+
+	public void guardarValores(String[] valores1){
+	
+		for(int x = 0; x < valores1.length; x++){
+			double valor = Double.parseDouble(valores1[x]);
+			valores.add(valor);			
+		}
+	}
+
+	public void crearGraficaBarras(){
+		graficaBarra = new GraficaBarra(ejeX, ejeY, titulo, uniones);		
+	}
+:};
+
+
+
+//daclarar los temrinales
+
+terminal DEF, BARRAS, PIE, TITULO, EJEX, EJEY, ETIQUETA, VALORES, UNIR, TIPO, TOTAL, EXTRA, CANTIDAD, PORCENTAJE, MAS, MENOS, POR, DIAGONAL, PARENTESISIZQUIERDO, EJECUTAR, PARENTESISDERECHO, PUNTOYCOMA, COMA, CORCHETEIZQUIERDO, CORCHETEDERECHO, LLAVEIZQUIERDA, LLAVEDERECHA, DOSPUNTOS, PALABRA;
+terminal Double ENTERO, DECIMAL;
+
+//declarar no terminales
+
+non terminal e, g, h, x, expresionbarras, coma, expresionpie, tipodegrafica, d, f, items, valores, llaves, tipo, total, operacion;
+
+//gramatica
+
+e ::= DEF tipodegrafica {:             :}
+	;
+tipodegrafica ::= BARRAS LLAVEIZQUIERDA expresionbarras d {:crearGraficaBarras();:}
+	|  PIE LLAVEIZQUIERDA expresionpie d {::}
+	;
+d ::=  e {::}
+	| f
+	;
+f ::= EJECUTAR PARENTESISIZQUIERDO PALABRA PARENTESISDERECHO PUNTOYCOMA f {::}
+	| EJECUTAR PARENTESISIZQUIERDO PALABRA PARENTESISDERECHO PUNTOYCOMA {::}
+	;
+expresionbarras ::= TITULO DOSPUNTOS PALABRA:tituloString PUNTOYCOMA expresionbarras  {: titulo = tituloString.toString().replaceAll("\"", ""); :}
+	| EJEX DOSPUNTOS CORCHETEIZQUIERDO items:e1 CORCHETEDERECHO PUNTOYCOMA expresionbarras  {: 
+		String[] valores = e1.toString().replaceAll("\"", "").split(",");//obtenemos el array con todos las etiquetas que representan al eje X
+		guardarEjeX(valores);//mandamos a guardar el ejeX
+	:}
+	| EJEY DOSPUNTOS CORCHETEIZQUIERDO valores:e1 PUNTOYCOMA expresionbarras  {: 
+		String[] valores = e1.toString().split(",");//obtenemos el array con todos los numeros que representan al ejeY
+		guardarEjeY(valores);//mandamos a guardar el ejeY
+	:}
+	| UNIR DOSPUNTOS CORCHETEIZQUIERDO llaves CORCHETEDERECHO PUNTOYCOMA expresionbarras  {::}
+	| LLAVEDERECHA
+	;
+items ::= PALABRA:e1  {: RESULT = e1; :}
+	| PALABRA:e1 COMA items:e2 {: RESULT = e1+","+e2; :}
+	; 
+valores ::= operacion:e1 coma:e2 {: if(e2.toString().equals("-1")){
+						RESULT = e1 +"";					
+					}else{
+						RESULT = e1 +","+e2;
+					}	
+	 :}
+	;
+coma ::= COMA operacion:e1 coma:e2 {: if(e2.toString().equals("-1")){
+						RESULT = e1 +"";					
+					}else{
+						RESULT = e1 +","+e2;
+					} :}
+	| CORCHETEDERECHO  {: RESULT = "-1"; :}
+	;
+operacion ::= g:e1 {: RESULT = e1; :}
+	;
+g ::= g:e1 MAS h:e2 {: RESULT =  (double) e1 +  (double) e2; :}
+	| g:e1 MENOS h:e2 {: RESULT =  (double) e1 - (double) e2; :}
+	| h:e1 {: RESULT = e1; :}
+	;
+h ::= h:e1 POR x:e2 {: RESULT = (double) e1 * (double) e2; :}
+	| h:e1 DIAGONAL x:e2 {: RESULT = (double) e1 / (double) e2; :}
+	| x:e1 {: RESULT = e1; :}
+	;
+x ::= PARENTESISIZQUIERDO g:e1 PARENTESISDERECHO {: RESULT = e1; :}
+	| ENTERO:e1 {: RESULT = e1; :}
+	| DECIMAL:e2 {: RESULT = e2; :}
+	;
+llaves ::= LLAVEIZQUIERDA operacion:e1 COMA operacion:e2 LLAVEDERECHA {: 
+
+	Unir unir = new Unir((int) Double.parseDouble(e1.toString()), (int) Double.parseDouble(e2.toString()));//creamos el objeto unir
+	uniones.add(unir);//agregar el objeto unir al arrayList de unir 
+
+	:}
+	| LLAVEIZQUIERDA operacion:e1 COMA operacion:e2 LLAVEDERECHA COMA llaves {: 
+	Unir unir = new Unir((int) Double.parseDouble(e1.toString()), (int) Double.parseDouble(e2.toString()));//creamos el objeto unir
+	uniones.add(unir);//agregar el objeto unir al arrayList de unir 
+
+	:}
+	;
+expresionpie ::= TITULO DOSPUNTOS PALABRA:tituloString PUNTOYCOMA expresionpie  {: titulo = tituloString.toString().replaceAll("\"", ""); :}
+	| UNIR DOSPUNTOS CORCHETEIZQUIERDO llaves CORCHETEDERECHO PUNTOYCOMA expresionpie {::}
+	| ETIQUETA DOSPUNTOS CORCHETEIZQUIERDO items:e1 CORCHETEDERECHO PUNTOYCOMA expresionpie {:
+
+		String[] etiquetas = e1.toString().replaceAll("\"", "").split(",");//obtenemos el array con todos las etiquetas del pie
+		guardarEtiquetas(etiquetas);//mandamos a guardar las etiquetas 
+	
+	:}
+	| VALORES DOSPUNTOS CORCHETEIZQUIERDO valores:e1 PUNTOYCOMA expresionpie {: 
+
+		String[] valores = e1.toString().split(",");//obtenemos el array con todos los numeros que van dentro del pie
+		guardarValores(valores);//mandamos a guardar los valores del pie
+	:}
+
+	| TIPO DOSPUNTOS tipo:e1 PUNTOYCOMA  expresionpie {:
+		if(e1.toString().equals("Cantidad")){
+			tipo = "Cantidad";	
+		}else{
+			tipo = "Porcentaje";
+		}
+	:}
+	| TOTAL DOSPUNTOS total:e1 PUNTOYCOMA expresionpie {: 
+		total = Double.parseDouble(e1.toString());	
+	:}
+	| EXTRA DOSPUNTOS PALABRA:e1 PUNTOYCOMA expresionpie {:
+		extra = e1.toString().replaceAll("\"", "");
+	:}
+	| LLAVEDERECHA 
+	; 
+tipo ::= CANTIDAD {: RESULT = "Cantidad"; :}
+	| PORCENTAJE {: RESULT = "Porcentaje"; :}
+	;
+total ::= operacion:e1 {: RESULT = e1; :}
+	;
